@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>漁場生産力・水産多面的機能強化対策 活動管理システム（大分県・藻場/干潟版）</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="src/lib/exceljs.min.js"></script>
+</head>
+<body>
+
+  <!-- アプリケーションヘッダー -->
+  <header class="app-header">
+    <div>
+      <h1>大分県 藻場・干潟の保全活動管理システム <small>（水産多面的機能強化対策事業）</small></h1>
+    </div>
+    <div class="header-org-info">
+      <label for="header-org-switcher" class="sr-only">活動組織</label>
+      <select id="header-org-switcher" aria-label="活動組織を切り替え"></select>
+      <button type="button" id="btn-add-organization" title="活動組織を追加">＋組織追加</button>
+      <span id="header-year"></span>
+      <span id="header-org-name">読み込み中...</span>
+      <button type="button" id="btn-edit-header-org">設定変更</button>
+    </div>
+  </header>
+
+  <!-- メインレイアウト -->
+  <div class="layout">
+
+    <!-- サイドバーナビゲーション -->
+    <nav class="sidebar">
+      <div class="nav-section-title">日次管理</div>
+      <button type="button" class="nav-btn active" data-view="dashboard">📊 ダッシュボード</button>
+      <button type="button" class="nav-btn" data-view="budget">💰 予算管理</button>
+      <button type="button" class="nav-btn" data-view="settings">⚙️ 単価・設定</button>
+      <button type="button" class="nav-btn" data-view="inventory">📦 物品管理</button>
+      <button type="button" class="nav-btn" data-view="plan">📅 作業計画</button>
+      <button type="button" class="nav-btn" data-view="record">📝 実績記録</button>
+      <button type="button" class="nav-btn" data-view="payment">💵 支払先集計</button>
+
+      <div class="nav-section-title" style="margin-top:12px;">報告書・ツール</div>
+      <button type="button" class="nav-btn" data-view="report">📄 報告書出力 (様式1〜6)</button>
+      <button type="button" class="nav-btn" data-view="backup">💾 バックアップ・復元</button>
+
+      <div class="nav-section-title" style="margin-top:12px;">サポート</div>
+      <button type="button" class="nav-btn" data-view="help">❔ ヘルプ・使い方</button>
+    </nav>
+
+    <!-- メインコンテンツ領域 -->
+    <main class="content">
+
+      <!-- 1. ダッシュボード -->
+      <section id="view-dashboard" class="view active">
+        <div class="view-header"><h2>📊 ダッシュボード</h2></div>
+        <div class="view-body">
+          <div class="card">
+            <h3>警告 &amp; アラート</h3>
+            <div id="dash-alerts"></div>
+          </div>
+          <div class="card">
+            <h3>✨ はじめてガイド</h3>
+            <p class="hint">準備状況を確認しながら、次に必要な画面へ進めます。</p>
+            <div id="dash-onboarding"></div>
+          </div>
+          <div class="card">
+            <h3>🌱 活動のふりかえり</h3>
+            <div class="toolbar dash-retrospective-toolbar">
+              <label>年度:
+                <select id="dash-retrospective-year" aria-label="ふりかえる年度"></select>
+              </label>
+              <button type="button" class="btn-secondary" id="btn-print-retrospective">年度まとめを印刷 / PDF保存</button>
+            </div>
+            <div id="dash-retrospective"></div>
+          </div>
+          <div class="card">
+            <h3>🏅 活動の記録バッジ</h3>
+            <p class="hint">記録の積み重ねをお知らせします。順位付けや帳票の集計には使用しません。</p>
+            <div id="dash-achievements"></div>
+          </div>
+          <div class="card">
+            <h3>予算対比 &amp; 執行状況</h3>
+            <div id="dash-budget-summary"></div>
+          </div>
+          <div class="card">
+            <h3>計画・実績・支払の充足状況</h3>
+            <div id="dash-fulfillment-summary"></div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="card">
+              <h3>全体予算執行率</h3>
+              <div id="dash-exec-rate"></div>
+            </div>
+            <div class="card">
+              <h3>月別執行金額</h3>
+              <div id="dash-monthly-trend"></div>
+            </div>
+            <div class="card">
+              <h3>科目別執行内訳</h3>
+              <div id="dash-expense-graph"></div>
+            </div>
+            <div class="card">
+              <h3>地区別執行額</h3>
+              <div id="dash-area-graph"></div>
+            </div>
+            <div class="card">
+              <h3>活動項目別執行額</h3>
+              <div id="dash-activity-graph"></div>
+            </div>
+            <div class="card">
+              <h3>活動項目別 作業時間</h3>
+              <div id="dash-activity-hours"></div>
+            </div>
+            <div class="card">
+              <h3>期別 執行 vs 計画</h3>
+              <div id="dash-period-compare"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 予算管理（サブタブ：交付金収受 / 予算設定） -->
+      <section id="view-budget" class="view">
+        <div class="view-header">
+          <h2>💰 予算管理</h2>
+          <div class="subtab-bar">
+            <button class="subtab-btn active" data-subtab="budget" data-panel="budget-panel-grant">交付金収受フロー</button>
+            <button class="subtab-btn" data-subtab="budget" data-panel="budget-panel-setting">予算・執行計画設定</button>
+          </div>
+        </div>
+        <div id="budget-panel-grant" class="subtab-panel active">
+          <div class="toolbar">
+            <button class="btn-primary" id="btn-open-grant-modal">＋ 収受を登録</button>
+          </div>
+          <div id="budget-grant-list"></div>
+        </div>
+        <div id="budget-panel-setting" class="subtab-panel">
+          <div class="card">
+            <h3>採択予算額設定</h3>
+            <div class="form-grid" style="max-width:320px;">
+              <label>採択予算額（税込） (円): <input type="number" id="budget-amount" placeholder="1000000" inputmode="numeric"></label>
+            </div>
+            <button class="btn-primary" id="btn-save-budget">保存</button>
+          </div>
+          <div class="card" style="margin-top:16px;">
+            <h3>期別 執行計画額設定（様式2参照）</h3>
+            <div class="form-grid" style="max-width:480px;">
+              <label>第1回 計画額（税込） (円): <input type="number" id="budget-plan1" value="0" inputmode="numeric"></label>
+              <label>第2回 計画額（税込） (円): <input type="number" id="budget-plan2" value="0" inputmode="numeric"></label>
+              <label>第3回 計画額（税込） (円): <input type="number" id="budget-plan3" value="0" inputmode="numeric"></label>
+            </div>
+            <button class="btn-primary" id="btn-save-plan-periods">執行計画額保存</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 単価・設定（サブタブ：組織情報 / 単価マスタ / 地区・名簿 / 活動項目 / 潮位データ取込） -->
+      <section id="view-settings" class="view">
+        <div class="view-header">
+          <h2>⚙️ 単価・設定</h2>
+          <div class="subtab-bar">
+            <button class="subtab-btn active" data-subtab="settings" data-panel="settings-panel-org">組織情報</button>
+            <button class="subtab-btn" data-subtab="settings" data-panel="settings-panel-wage">単価マスタ</button>
+            <button class="subtab-btn" data-subtab="settings" data-panel="settings-panel-area">地区・名簿</button>
+            <button class="subtab-btn" data-subtab="settings" data-panel="settings-panel-activity">活動項目</button>
+            <button class="subtab-btn" data-subtab="settings" data-panel="settings-panel-tide">🌊 潮位データ</button>
+          </div>
+        </div>
+        <div id="settings-panel-org" class="subtab-panel active">
+          <div class="card" id="settings-org-display">
+            <h3>組織基本設定</h3>
+            <div id="settings-org-info"></div>
+            <div class="toolbar" style="margin-top:12px; gap:8px; flex-wrap:wrap;">
+              <button class="btn-edit" id="btn-open-org-modal">✏️ 編集</button>
+              <button class="btn-secondary" id="btn-seed-demo-data">デバッグデータ投入</button>
+              <button class="btn-del" id="btn-clear-all-data">全データ削除</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>市町村マスタ &amp; 地図設定（位置図原点・タイル参照）</h3>
+            <div class="form-grid" style="max-width:480px;">
+              <label>対象市町村:
+                <select id="set-municipality">
+                  <option value="">選択してください...</option>
+                </select>
+              </label>
+              <label>地理院タイルモード:
+                <select id="set-map-tile-mode">
+                  <option value="online">オンライン参照 (地理院Webタイル)</option>
+                  <option value="bundled">ローカル同梱タイル (オフライン用)</option>
+                </select>
+              </label>
+            </div>
+            <button class="btn-primary" id="btn-save-municipality">地図設定を保存</button>
+          </div>
+
+          <div class="card">
+            <h3>協定範囲 (活動範囲) GeoJSON 取込・スタイル設定</h3>
+            <p class="hint">活動組織の協定範囲GeoJSONファイルを取り込んで位置図上に重ね表示します。</p>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+              <label>GeoJSON ファイル:
+                <input type="file" id="input-geojson-file" accept=".geojson,.json">
+              </label>
+              <label>枠線色:
+                <input type="color" id="set-geojson-stroke" value="#0044ff">
+              </label>
+              <label>塗りつぶし色:
+                <input type="color" id="set-geojson-fill" value="#0088ff">
+              </label>
+              <label>不透明度 (0.1 〜 1.0):
+                <input type="number" id="set-geojson-opacity" value="0.3" step="0.1" min="0.1" max="1.0" inputmode="numeric">
+              </label>
+            </div>
+            <div style="margin-top:10px;">
+              <button class="btn-primary" id="btn-save-geojson-style">設定保存</button>
+              <button class="btn-del" id="btn-delete-geojson">登録GeoJSON削除</button>
+            </div>
+            <div id="geojson-status-msg" class="hint" style="margin-top:8px;"></div>
+          </div>
+        </div>
+        <div id="settings-panel-wage" class="subtab-panel">
+          <div class="card" id="settings-wage-display">
+            <h3>賃金計算方式 &amp; 単価マスタ（税込表記）</h3>
+            <div id="settings-wage-info"></div>
+            <button class="btn-edit" id="btn-open-wage-modal">✏️ 編集</button>
+          </div>
+        </div>
+        <div id="settings-panel-area" class="subtab-panel">
+          <div class="toolbar">
+            <button class="btn-primary" id="btn-open-area-modal">＋ 地区を追加</button>
+          </div>
+          <div id="settings-area-list"></div>
+        </div>
+        <div id="settings-panel-activity" class="subtab-panel">
+          <div class="card">
+            <h3>活動項目の有効化設定</h3>
+            <p class="hint">対象カテゴリーを選択して有効にする活動項目を設定してください。</p>
+            <div style="display:flex; gap:12px; margin-bottom:16px;">
+              <button class="category-btn moba active" id="btn-cat-moba" onclick="App.Master.openActivityModal('moba')">🌿 藻場の保全 (14項目)</button>
+              <button class="category-btn higata" id="btn-cat-higata" onclick="App.Master.openActivityModal('higata')">🦀 干潟等の保全 (16項目)</button>
+            </div>
+            <div id="settings-activity-summary"></div>
+          </div>
+        </div>
+        <!-- 潮汐データ取込パネル -->
+        <div id="settings-panel-tide" class="subtab-panel"> <!-- ← 追加 -->
+          <div class="card">
+            <h3>🌊 潮汐データの取込</h3>
+                
+            <div id="tide-data-status" style="margin-bottom:12px; font-size:13px;"></div>
+                
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <input type="file" id="tide-folder-input" multiple accept=".txt" style="font-size:13px;">
+              <button class="btn-primary" id="tide-data-import-btn">
+                📥 読み込む
+              </button>
+              <button class="btn-secondary" id="tide-data-clear-btn" style="color:#dc2626; border-color:#dc2626;">
+                🗑️ データを全削除
+              </button>
+            </div>
+                
+            <div id="tide-data-msg" style="margin-top:10px; font-size:13px; min-height:20px;"></div>
+            <div id="tide-imported-list" style="margin-top:16px;"></div>
+          </div>
+        </div> <!-- ← 追加 -->
+      </section> <!-- settings section の閉じタグ -->
+
+      <!-- 4. 物品管理（サブタブ：物品台帳 / 入出庫ログ） -->
+      <section id="view-inventory" class="view">
+        <div class="view-header">
+          <h2>📦 物品管理</h2>
+          <div class="subtab-bar">
+            <button class="subtab-btn active" data-subtab="inventory" data-panel="inventory-panel-items">物品台帳</button>
+            <button class="subtab-btn" data-subtab="inventory" data-panel="inventory-panel-logs">入出庫ログ</button>
+          </div>
+        </div>
+        <div id="inventory-panel-items" class="subtab-panel active">
+          <div class="toolbar">
+            <button class="btn-primary" id="btn-open-inv-item-modal">＋ 物品を登録</button>
+          </div>
+          <div id="inventory-item-list"></div>
+        </div>
+        <div id="inventory-panel-logs" class="subtab-panel">
+          <div class="toolbar">
+            <button class="btn-primary" id="btn-open-inv-log-modal">＋ 入庫・購入を登録</button>
+          </div>
+          <div id="inventory-log-list"></div>
+        </div>
+      </section>
+
+      <!-- 5. 作業計画（カレンダーUI） -->
+      <section id="view-plan" class="view">
+        <div class="view-header">
+          <h2>📅 作業計画</h2>
+        </div>
+        <div class="view-body">
+          <div class="plan-layout">
+            <div class="card plan-calendar-card" style="padding:12px;">
+              <div class="toolbar" style="margin-bottom:12px; justify-content:flex-start; gap:10px; flex-wrap:wrap;">
+                <label>カレンダー色分けの適用軸:
+                  <select id="plan-calendar-basis">
+                    <option value="activity">活動項目基準</option>
+                    <option value="area">地区基準</option>
+                  </select>
+                </label>
+                <button class="btn-primary" id="btn-save-plan-calendar-basis">適用軸を保存</button>
+              </div>
+              <div class="cal-nav">
+                <button class="btn-outline" id="cal-prev">◀</button>
+                <h3 id="cal-title"></h3>
+                <button class="btn-outline" id="cal-next">▶</button>
+                <button class="btn-secondary" id="cal-today" style="margin-left:8px; font-size:12px; padding:5px 10px;">今月</button>
+              </div>
+              <div class="cal-grid" id="cal-grid"></div>
+            </div>
+            <div class="card plan-tide-card">
+              <h3>潮位グラフ</h3>
+              <p class="hint">日付をクリックすると潮位グラフを固定します。日付をダブルクリックすると作業を入力できます。グラフにカーソルを乗せると時刻と潮位を表示し、当日の作業実績時間帯は緑色で示します。</p>
+              <div id="plan-tide-graph"><p class='hint'>潮位データがありません。</p></div>
+            </div>
+          </div>
+          <div id="plan-empty-guidance"></div>
+          <div class="card" id="plan-list-card" style="display:none;">
+            <h3 id="plan-list-title">選択日の計画一覧</h3>
+            <div id="plan-list-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 実績記録（サブタブ廃止・一本化） -->
+      <section id="view-record" class="view">
+        <div class="view-header">
+          <h2>📝 実績記録</h2>
+        </div>
+        <div class="view-body">
+          <!-- サブタブ -->
+          <div style="display:flex; gap:0; border-bottom:2px solid #334155; margin-bottom:14px;">
+            <button id="rec-subtab-list" style="padding:8px 20px; background:none; border:none; border-bottom:3px solid #8b5cf6;
+                     color:#f1f5f9; font-weight:700; cursor:pointer; font-size:13px; margin-bottom:-2px;">
+              📝 実績一覧
+            </button>
+            <button id="rec-subtab-receipt" style="padding:8px 20px; background:none; border:none; border-bottom:3px solid transparent;
+                     color:#94a3b8; font-weight:600; cursor:pointer; font-size:13px; margin-bottom:-2px;">
+              🧾 領収書一覧
+            </button>
+          </div>
+        
+          <!-- 実績一覧パネル -->
+          <div id="rec-panel-list">
+            <div class="toolbar" style="gap:12px; flex-wrap:wrap; align-items:center;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button id="btn-month-prev" class="btn-secondary btn-sm" title="前の月へ">◀</button>
+                <label style="font-weight:600; margin:0;">表示月:
+                  <select id="record-month-select" style="margin-left:6px;"></select>
+                </label>
+                <button id="btn-month-next" class="btn-secondary btn-sm" title="次の月へ">▶</button>
+              </div>
+              <button class="btn-primary" id="btn-open-rec-modal">＋ 計画外作業を登録</button>
+            </div>
+            <div id="record-list" style="margin-top:12px;"></div>
+          </div>
+        
+          <!-- 領収書一覧パネル -->
+          <div id="rec-panel-receipt" style="display:none;">
+            <div class="toolbar" style="gap:12px; flex-wrap:wrap; align-items:center;">
+              <input id="receipt-search" type="text" placeholder="🔍 領収書番号・支払者で検索..." style="padding:6px 10px; border-radius:6px; border:1px solid #334155;
+                       background:#0f172a; color:#f1f5f9; font-size:13px; min-width:220px;">
+            </div>
+            <div id="receipt-list" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. 支払先集計 -->
+      <section id="view-payment" class="view">
+        <div class="view-header"><h2>💵 支払先集計</h2></div>
+        <div class="view-body">
+          <div class="card">
+            <div id="payment-summary"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. 報告書出力（サブタブ化） -->
+      <section id="view-report" class="view">
+        <div class="view-header">
+          <h2>📄 報告書出力 (様式1〜6)</h2>
+          <div class="subtab-bar">
+            <button class="subtab-btn active" data-subtab="report" data-panel="report-panel-batch">一括出力</button>
+            <button class="subtab-btn" data-subtab="report" data-panel="report-panel-f1">様式1 (交付申請書)</button>
+            <button class="subtab-btn" data-subtab="report" data-panel="report-panel-f2">様式2 (執行状況)</button>
+            <button class="subtab-btn" data-subtab="report" data-panel="report-panel-f3">様式3 (出納簿)</button>
+            <button class="subtab-btn" data-subtab="report" data-panel="report-panel-f4">様式4 (活動記録簿)</button>
+            <button class="subtab-btn" data-subtab="report" data-panel="report-panel-f56">様式5・6 (日誌・写真)</button>
+          </div>
+        </div>
+
+        <!-- サブタブ1: 一括出力 -->
+        <div id="report-panel-batch" class="subtab-panel active">
+          <div class="card">
+            <h3>一括出力 (様式1〜4)</h3>
+            <div class="toolbar">
+              <label><input type="checkbox" id="b-f1" checked> 様式1 (交付申請書/Word)</label>
+              <label><input type="checkbox" id="b-f2" checked> 様式2 (執行状況報告書/Excel)</label>
+              <label><input type="checkbox" id="b-f3" checked> 様式3 (金銭出納簿/Excel)</label>
+              <label><input type="checkbox" id="b-f4" checked> 様式4 (活動記録簿/Excel)</label>
+              <button class="btn-excel" onclick="App.Batch.exportBatch()">一括出力実行</button>
+              <span id="batch-msg" class="msg"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- サブタブ2: 様式1 (交付申請書) -->
+        <div id="report-panel-f1" class="subtab-panel">
+          <div class="card">
+            <h3>様式1: 交付金交付申請書</h3>
+            <div class="form-grid">
+              <label>採択決定額 ①（税込） (円): <input type="number" id="f1-amount1" value="0" inputmode="numeric" readonly></label>
+              <label>既交付額 ②（税込） (円): <input type="number" id="f1-amount2" value="0" inputmode="numeric"></label>
+              <label>交付申請額 ③（税込） (円): <input type="number" id="f1-amount3" value="0" inputmode="numeric"></label>
+              <label>申請対象の締め日: <input type="date" id="f1-cutoff-date"></label>
+              <label style="flex-direction:row; align-items:center; justify-content:flex-end; gap:8px; padding-top:18px;">
+                見込みを含める
+                <input type="checkbox" id="f1-include-forecast">
+              </label>
+              <label>見込み対象期日: <input type="date" id="f1-forecast-cutoff-date"></label>
+            </div>
+            <div id="f1-summary" class="hint" style="margin-top:10px;"></div>
+            <div class="toolbar">
+              <button class="btn-primary" onclick="App.Form1.calc()">差額計算</button>
+              <button class="btn-word" onclick="App.Form1.exportWord()">Word(.doc)出力</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- サブタブ3: 様式2 (執行状況報告書) -->
+        <div id="report-panel-f2" class="subtab-panel">
+          <div class="card">
+            <h3>様式2: 交付金執行状況報告書</h3>
+            <p class="hint" style="color:#94a3b8;">※期別計画額は「予算管理」タブで設定した値が自動参照されます。</p>
+            <div class="toolbar">
+              <button class="btn-primary" onclick="App.Form2.render()">集計再計算</button>
+              <button class="btn-excel" onclick="App.Form2.exportExcel()">Excel出力</button>
+            </div>
+            <div id="f2-check"></div><div id="f2-preview"></div>
+          </div>
+        </div>
+
+        <!-- サブタブ4: 様式3 (金銭出納簿) -->
+        <div id="report-panel-f3" class="subtab-panel">
+          <div class="card">
+            <h3>様式3: 金銭出納簿</h3>
+            <div class="toolbar">
+              <label>対象期: <select id="ledger-period">
+                <option value="all" selected>全期</option>
+                <option value="1">第1期 (4-6月)</option>
+                <option value="2">第2期 (7-10月)</option>
+                <option value="3">第3期 (11-2月)</option>
+              </select></label>
+              <button class="btn-excel" onclick="App.FormLedger.exportExcel()">Excel出力</button>
+            </div>
+            <div id="ledger-summary"></div>
+            <div class="table-wrap"><table id="ledger-table" class="data-table"></table></div>
+          </div>
+        </div>
+
+        <!-- サブタブ5: 様式4 (活動記録簿) -->
+        <div id="report-panel-f4" class="subtab-panel">
+          <div class="card">
+            <h3>様式4: 活動記録簿</h3>
+            <div class="toolbar">
+              <label>対象期: <select id="f4-period">
+                <option value="all" selected>全期</option>
+                <option value="1">第1期 (4-6月)</option>
+                <option value="2">第2期 (7-10月)</option>
+                <option value="3">第3期 (11-2月)</option>
+              </select></label>
+              <button class="btn-excel" onclick="App.Form4.exportExcel()">Excel出力</button>
+            </div>
+            <div id="f4-summary"></div>
+            <div class="table-wrap"><table id="f4-table" class="data-table"></table></div>
+          </div>
+        </div>
+
+        <!-- サブタブ6: 様式5・6 (日誌・写真整理帳) -->
+        <div id="report-panel-f56" class="subtab-panel">
+          <div class="card">
+            <h3>様式5 &amp; 様式6（活動一覧から編集）</h3>
+            <p class="hint">各活動行の右側ボタンから様式5（活動記録日誌）・様式6（写真整理帳）を編集できます。編集済みの行はボタンの色で確認できます。</p>
+        
+            <!-- フィルタ・操作バー -->
+            <div class="toolbar" style="gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+              <label style="font-weight:600; margin:0;">対象期:
+                <select id="f56-period-filter" style="margin-left:6px;">
+                  <option value="all" selected>全期</option>
+                  <option value="1">第1期 (4〜6月)</option>
+                  <option value="2">第2期 (7〜10月)</option>
+                  <option value="3">第3期 (11〜2月)</option>
+                </select>
+              </label>
+              <label style="font-weight:600; margin:0;">地区:
+                <select id="f56-area-filter" style="margin-left:6px;">
+                  <option value="all">全地区</option>
+                </select>
+              </label>
+              <button class="btn-secondary" id="btn-f56-refresh" style="font-size:12px;">🔄 一覧を更新</button>
+              <button type="button" id="btn-check-storage" class="btn-secondary btn-sm">
+                📊 ストレージ容量を確認
+              </button>
+
+              <button id="btn-delete-unused-data-main" class="btn-secondary btn-sm" style="color:#dc2626; border-color:#dc2626;">
+                🗑️ 不要データを削除
+              </button>
+
+
+              <div style="margin-left:auto; display:flex; gap:16px; font-size:12px; align-items:center;">
+                <span style="display:flex; align-items:center; gap:4px;">
+                  <span
+                    style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#8b5cf6;"></span>様式5編集済
+                </span>
+                <span style="display:flex; align-items:center; gap:4px;">
+                  <span
+                    style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#0891b2;"></span>様式6編集済
+                </span>
+              </div>
+            </div>
+        
+            <!-- 活動一覧テーブル -->
+            <div class="table-wrap">
+              <table id="f56-activity-table" class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width:90px;">日付</th>
+                    <th style="width:100px;">地区</th>
+                    <th>活動項目</th>
+                    <th style="width:80px;">参加人数</th>
+                    <th style="width:80px;">作業時間</th>
+                    <th style="width:100px; text-align:center;">様式5<br><span
+                        style="font-size:10px; font-weight:400;">活動記録日誌</span></th>
+                    <th style="width:100px; text-align:center;">様式6<br><span
+                        style="font-size:10px; font-weight:400;">写真整理帳</span></th>
+                  </tr>
+                </thead>
+                <tbody id="f56-activity-tbody">
+                  <tr>
+                    <td colspan="7" style="text-align:center; color:#64748b; padding:24px;">実績データがありません</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+        
+            <!-- 一括出力ボタン -->
+            <div class="toolbar" style="margin-top:16px; gap:12px;">
+              <button class="btn-excel" id="btn-f56-export-all-f5">📥 様式5 全件Excel出力</button>
+              <button class="btn-secondary" id="btn-f56-print-all-f6">🖨️ 様式6 全件印刷</button>
+              <button type="button" class="btn-excel" id="btn-f6-export-excel-all">
+                📥 様式6 全件Excel出力
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ============================================================
+             様式5 編集モーダル
+             ============================================================ -->
+        <div id="modal-form5" class="modal-backdrop" style="display:none;">
+          <div class="modal-content modal-xl" style="max-width:860px; width:95vw;">
+            <div class="modal-header">
+              <h3 id="modal-form5-title">📋 様式5：活動記録日誌の編集</h3>
+              <button class="modal-close" data-close="modal-form5">✕</button>
+            </div>
+            <!-- recId 保持用（非表示） -->
+            <input type="hidden" id="modal-form5-rec-id" value="">
+
+            <div class="modal-body" style="padding:16px 20px; overflow-y:auto;">
+            
+              <!-- ヘッダー情報（読み取り専用） -->
+              <div style="background:#162032; border:1px solid #334155; border-radius:8px;
+                          padding:12px 16px; margin-bottom:16px; font-size:13px; line-height:2;">
+                <div><b>活動日：</b><span id="f5m-date"></span>　
+                  <span id="f5m-time"></span>（<span id="f5m-hours"></span>時間）
+                </div>
+                <div><b>活動内容：</b><span id="f5m-activity"></span></div>
+                <div><b>活動場所：</b><span id="f5m-area"></span>地先</div>
+              </div>
+            
+              <!-- 作業者テーブル -->
+              <div style="margin-bottom:16px;">
+                <div class="modal-section-title">👥 作業者一覧</div>
+                <div style="overflow-x:auto;">
+                  <table class="data-table" id="f5m-member-table" style="width:100%; font-size:13px; min-width:360px;">
+                    <thead>
+                      <tr>
+                        <th style="text-align:left;">氏名</th>
+                        <th style="text-align:center; width:60px;">出席</th>
+                        <th style="text-align:center; width:60px;">用船</th>
+                        <th style="text-align:center; width:60px;">車両</th>
+                      </tr>
+                    </thead>
+                    <tbody id="f5m-member-tbody">
+                      <!-- JS で生成 -->
+                    </tbody>
+                    <tfoot id="f5m-member-tfoot">
+                      <!-- JS で生成 -->
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            
+              <!-- 位置図 -->
+              <div style="margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div class="modal-section-title" style="margin:0;">🗺️ 位置図</div>
+                  <button type="button" class="btn-primary btn-sm" id="btn-open-imagemap">
+                    🖼 位置図を編集（任意画像）
+                  </button>
+                  <button id="btn-delete-current-image" class="btn-secondary btn-sm" style="color:#dc2626; border-color:#dc2626;">
+                    🗑️ 画像を削除
+                  </button>
+                </div>
+                <div id="f5m-map-preview" style="margin-top:8px; min-height:120px; border-radius:8px;
+                         border:2px dashed #334155; background:#0f172a;
+                         display:flex; align-items:center; justify-content:center;
+                         color:#94a3b8; font-size:13px; padding:8px;">
+                  <span style="text-align:center;">
+                    🖼️ <strong>位置図が未設定です。</strong><br>
+                    「位置図を編集」ボタンから画像を選択してください。
+                  </span>
+                </div>
+              </div>
+
+            
+              <!-- 環境観察・コメント -->
+              <div>
+                <div class="modal-section-title">📝 環境観察・コメント（任意）</div>
+                <textarea id="f5m-comment" rows="4" style="width:100%; padding:8px; background:#0f172a;
+                         border:1px solid #334155; border-radius:6px;
+                         color:#e2e8f0; font-size:13px; resize:vertical;
+                         box-sizing:border-box;" placeholder="自由記入欄（環境観察の結果・気づきなど）"></textarea>
+              </div>
+            
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn-excel" id="btn-f5m-export">📥 この活動をExcel出力</button>
+              <div>
+                <button class="btn-outline" data-close="modal-form5">キャンセル</button>
+                <button class="btn-primary" id="btn-save-form5-modal">💾 保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ============================================================
+             様式6 編集モーダル
+             ============================================================ -->
+        <div id="modal-form6" class="modal-backdrop" style="display:none;">
+          <div class="modal-content modal-xl" style="max-width:900px; width:95vw;">
+            <div class="modal-header">
+              <h3 id="modal-form6-title">📸 様式6：作業写真整理帳の編集</h3>
+              <button class="modal-close" data-close="modal-form6">✕</button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="modal-form6-rec-id">
+        
+              <!-- 基本情報（読み取り専用） -->
+              <div style="background:#162032; border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:16px;">
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; font-size:13px;">
+                  <div><span style="color:#94a3b8;">日付：</span><strong id="f6m-date" style="color:#e2e8f0;"></strong></div>
+                  <div><span style="color:#94a3b8;">地区：</span><strong id="f6m-area" style="color:#e2e8f0;"></strong></div>
+                  <div><span style="color:#94a3b8;">活動項目：</span><strong id="f6m-activity" style="color:#e2e8f0;"></strong></div>
+                  <div><span style="color:#94a3b8;">参加人数：</span><strong id="f6m-people" style="color:#e2e8f0;"></strong></div>
+                </div>
+              </div>
+        
+              <!-- 写真枠一覧 -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div class="modal-section-title" style="margin:0;">📸 写真・説明文の登録</div>
+                <button type="button" class="btn-primary" id="btn-f6m-add-photo" style="font-size:12px;">＋ 写真を追加</button>
+              </div>
+              <p class="hint" style="margin-bottom:12px;">1ページあたり3枚の写真を登録できます。写真をクリックして画像を選択してください。</p>
+        
+              <div id="f6m-photos-container" style="display:flex; flex-direction:column; gap:12px;">
+                <!-- 動的に写真枠が追加される -->
+              </div>
+        
+              <div id="f6m-empty-msg" style="text-align:center; color:#64748b; padding:32px; display:none;">
+                写真が登録されていません。「＋ 写真を追加」ボタンで追加してください。
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" id="btn-f6m-print">🖨️ この活動のみ印刷</button>
+              <button type="button" class="btn-excel" id="btn-f6m-export-excel">
+                📥 Excel出力
+              </button>
+              <div>
+                <button class="btn-outline" data-close="modal-form6">キャンセル</button>
+                <button class="btn-primary" id="btn-save-form6-modal">💾 保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ============================================================
+             様式5 位置図編集モーダル
+             ============================================================ -->
+        <div id="modal-form5-map" class="modal-backdrop" style="display:none;">
+          <div class="modal-content modal-xl"
+            style="max-width:960px; width:95vw; max-height:95vh; display:flex; flex-direction:column;">
+            <div class="modal-header">
+              <h3 id="modal-form5-map-title">🗺️ 位置図の編集</h3>
+              <button class="modal-close" data-close="modal-form5-map">✕</button>
+            </div>
+            <div class="modal-body" style="flex:1; overflow-y:auto; padding:12px 16px;">
+        
+              <!-- ツールバー -->
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+                          margin-bottom:10px; padding:8px 10px;
+                          background:#162032; border-radius:8px; border:1px solid #334155;">
+        
+                <!-- ツール選択 -->
+                <div style="display:flex; gap:4px;">
+                  <button type="button" id="f5map-tool-select" class="f5map-tool-btn f5map-tool-active"
+                    onclick="App.Form5Map.setTool('select'); App.Form5._updateMapToolBtn('select');" title="選択・移動">
+                    ↖️ 選択
+                  </button>
+                  <button type="button" id="f5map-tool-rect" class="f5map-tool-btn"
+                    onclick="App.Form5Map.setTool('rect'); App.Form5._updateMapToolBtn('rect');" title="矩形を描く">
+                    ⬜ 矩形
+                  </button>
+                  <button type="button" id="f5map-tool-circle" class="f5map-tool-btn"
+                    onclick="App.Form5Map.setTool('circle'); App.Form5._updateMapToolBtn('circle');" title="円を描く">
+                    ⭕ 円
+                  </button>
+                  <button type="button" id="btn-check-storage-map" class="btn-secondary btn-sm" style="font-size:12px;">
+                    📊 ストレージ容量確認
+                  </button>
+                  <button type="button" id="btn-delete-unused-data-map" class="btn-secondary btn-sm"
+                    style="color:#dc2626; border-color:#dc2626;">
+                    🗑️ 不要データ削除
+                  </button>
+                </div>
+        
+                <div style="width:1px; height:28px; background:#334155;"></div>
+        
+                <!-- テキスト・マーカー -->
+                <div style="display:flex; gap:4px;">
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5Map.addText();" title="テキストを追加">
+                    🔤 テキスト
+                  </button>
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5Map.addMarker();" title="マーカーを追加">
+                    📍 マーカー
+                  </button>
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5Map.editSelectedText();"
+                    title="選択中のテキスト・マーカーを編集">
+                    ✏️ テキスト編集
+                  </button>
+                </div>
+        
+                <div style="width:1px; height:28px; background:#334155;"></div>
+        
+                <!-- 削除・クリア -->
+                <div style="display:flex; gap:4px;">
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5Map.deleteSelected();" style="color:#f87171;"
+                    title="選択中の図形を削除">
+                    🗑️ 削除
+                  </button>
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5Map.clearAll();" style="color:#f87171;"
+                    title="全図形を消去">
+                    🧹 全消去
+                  </button>
+                </div>
+        
+                <div style="width:1px; height:28px; background:#334155;"></div>
+        
+                <!-- 背景画像アップロード -->
+                <label class="f5map-tool-btn btn-outline btn-sm" style="cursor:pointer;" title="背景画像をアップロード">
+                  🖼️ 背景画像を選択
+                  <input type="file" id="f5map-bg-input" accept="image/*" style="display:none;"
+                    onchange="App.Form5Map.setBgImage(this.files[0]);">
+                </label>
+
+        
+                <!-- ズーム -->
+                <div style="display:flex; gap:4px; margin-left:auto;">
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5._mapZoom(1);" title="ズームイン">
+                    🔍＋
+                  </button>
+                  <button type="button" class="f5map-tool-btn" onclick="App.Form5._mapZoom(-1);" title="ズームアウト">
+                    🔍－
+                  </button>
+                </div>
+              </div>
+        
+              <!-- キャンバス -->
+              <div style="position:relative; border:1px solid #334155; border-radius:8px; overflow:hidden;
+                          background:#0f172a; line-height:0;">
+                <canvas id="f5map-canvas" width="880" height="520" style="display:block; width:100%; cursor:crosshair;">
+                </canvas>
+              </div>
+        
+              <div class="hint" style="margin-top:8px; font-size:13px; color:#94a3b8;">
+                <div>🖼️ 操作方法：</div>
+                <ul style="margin:6px 0 0 16px; padding-left:0; list-style:disc; color:#94a3b8;">
+                  <li>ドラッグで地図をパン、マウスホイールでズームできます。</li>
+                  <li>図形を選択してドラッグで移動できます。</li>
+                  <li>変更は自動保存されます。</li>
+                </ul>
+              </div>
+            </div>
+        
+            <div class="modal-footer">
+              <button class="btn-outline" id="btn-f5map-close">✕ 閉じる</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 任意画像 位置図エディタ モーダル ===== -->
+        <div id="modal-form5-imagemap" class="modal-backdrop" style="display:none;">
+          <div class="modal-content modal-xl"
+            style="max-width:960px; width:95vw; max-height:95vh; display:flex; flex-direction:column;">
+        
+            <div class="modal-header">
+              <h3 id="modal-form5-imagemap-title">🖼️ 位置図の編集（任意画像）</h3>
+              <button class="modal-close btn-secondary btn-sm" id="imagemap-modal-close" style="font-size:12px;">
+                ✕ 
+              </button>
+
+            </div>
+        
+            <div class="modal-body" style="flex:1; overflow-y:auto; padding:12px 16px;">
+        
+              <!-- ツールバー -->
+              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+                          margin-bottom:8px; padding:8px 10px;
+                          background:#162032; border-radius:8px; border:1px solid #334155;">
+        
+                <!-- 画像選択 -->
+                <label class="f5map-tool-btn" style="cursor:pointer;">
+                  📂 画像を選択
+                  <input type="file" id="imagemap-file-input" accept="image/*" style="display:none;">
+                </label>
+        
+                <div style="width:1px; height:28px; background:#334155;"></div>
+        
+                <!-- ツール選択 -->
+                <button class="f5map-tool-btn" id="imagemap-tool-select">▶ 選択</button>
+                <button class="f5map-tool-btn" id="imagemap-tool-rect">□ 矩形</button>
+                <button class="f5map-tool-btn" id="imagemap-tool-circle">○ 円</button>
+                <button class="f5map-tool-btn" id="imagemap-tool-text">T テキスト</button>
+                <button class="f5map-tool-btn" id="imagemap-tool-marker">📍 マーカー</button>
+                <button type="button" id="btn-check-storage-imagemap" class="btn-secondary btn-sm" style="font-size:12px;">
+                  📊 ストレージ容量確認
+                </button>
+                <button type="button" id="btn-delete-unused-data-imagemap" class="btn-secondary btn-sm"
+                  style="color:#dc2626; border-color:#dc2626;">
+                  🗑️ 不要データ削除
+                </button>
+       
+                <div style="width:1px; height:28px; background:#334155;"></div>
+        
+                <!-- 色指定 -->
+                <label style="font-size:12px; color:#94a3b8; margin:0; display:flex; align-items:center; gap:4px;">
+                  色：
+                  <input type="color" id="imagemap-color-picker" value="#dc3545" style="width:36px; height:28px; padding:2px;
+                           border:1px solid #334155; border-radius:4px; cursor:pointer;
+                           background:#0f172a;">
+                </label>
+        
+                <div style="width:1px; height:28px; background:#334155;"></div>
+        
+                <!-- 編集操作 -->
+                <button class="f5map-tool-btn" id="imagemap-edit-text">✏️ テキスト編集</button>
+                <button class="f5map-tool-btn" id="imagemap-delete" style="color:#f87171;">🗑 削除</button>
+                <button class="f5map-tool-btn btn-danger btn-sm" id="imagemap-clear" style="color:#dc2626; font-size:12px;">
+                  🧹 全図形を消去
+                </button>
+
+              </div>
+        
+              <!-- キャンバス -->
+              <div style="border:1px solid #334155; border-radius:8px;
+                          overflow:hidden; background:#0f172a; line-height:0;">
+                <canvas id="f5imagemap-canvas" width="900" height="600" style="display:block; width:100%; cursor:crosshair;">
+                </canvas>
+              </div>
+        
+            </div>
+        
+            <div class="modal-footer">
+              <button class="btn-outline" id="imagemap-modal-cancel">キャンセル</button>
+              <button class="btn-primary btn-sm" id="imagemap-modal-save" style="font-size:12px;">
+                💾 変更を保存して閉じる
+              </button>
+
+            </div>
+        
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. バックアップ -->
+      <section id="view-backup" class="view">
+        <div class="view-header"><h2>💾 バックアップ・復元</h2></div>
+        <div class="view-body">
+          <div class="card">
+            <h3>データエクスポート</h3>
+            <p class="hint">全データ（写真・位置図データ含む）を JSON 形式でバックアップ保存します。</p>
+            <p id="backup-directory-status" class="hint" aria-live="polite">保存先フォルダーを確認中...</p>
+            <button type="button" class="btn-secondary" id="btn-configure-backup-directory">バックアップ保存先フォルダーを設定</button>
+            <p class="hint">対応ブラウザーでは、設定したフォルダーへJSON・CSVを書き込みます。アクセス許可が得られない場合は、通常のダウンロードに切り替わります。ブラウザーのデータ消去やフォルダー移動後は、再設定が必要なことがあります。</p>
+            <button class="btn-primary" onclick="App.Backup.exportFullBackup()">フルバックアップ (JSON) 出力</button>
+            <button class="btn-secondary" onclick="App.Backup.exportCsvBackup()">軽量 CSV バックアップ 出力</button>
+          </div>
+          <div class="card">
+            <h3>データ復元 (インポート)</h3>
+            <p class="hint">保存した <code>moba_full_backup_*.json</code> を選択して全データを上書き復元します。</p>
+            <input type="file" id="input-backup-file" accept=".json">
+          </div>
+          <div class="card">
+            <h3>IndexedDB 作業データ管理</h3>
+            <p class="hint">作業実績は日付ごとに保存し、写真・位置図の画像本体は圧縮して IndexedDB に保存します。ブラウザーの保存可能容量は端末や空き容量により異なるため、1年分の保存を保証するものではありません。定期的にバックアップをダウンロードしてください。</p>
+            <div class="toolbar" style="gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn-primary" id="btn-export-work-data">作業データをJSON出力</button>
+              <label class="btn-secondary" for="input-import-work-data" style="cursor:pointer;">作業データをJSON復元</label>
+              <input type="file" id="input-import-work-data" accept=".json,application/json" style="display:none;">
+              <button type="button" class="btn-secondary" id="btn-refresh-storage">容量・一覧を更新</button>
+              <label>並び順:
+                <select id="storage-sort">
+                  <option value="date">日付（新しい順）</option>
+                  <option value="size">サイズ（大きい順）</option>
+                </select>
+              </label>
+              <button type="button" class="btn-danger" id="btn-delete-selected-work-data">選択した日付を削除</button>
+            </div>
+            <p id="storage-usage-summary" class="hint" aria-live="polite">容量情報を読み込み中...</p>
+            <div id="storage-record-list" class="storage-record-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. ヘルプ・使い方 -->
+      <section id="view-help" class="view">
+        <div class="view-header">
+          <h2>❔ ヘルプ・使い方</h2>
+        </div>
+        <div class="view-body help-content">
+          <div class="card help-intro">
+            <h3>はじめてお使いになる方へ</h3>
+            <p>このアプリは、活動組織ごとに予算・作業計画・実績を記録し、報告書を作成するためのツールです。まずは以下の順番で設定すると、迷わず使い始められます。</p>
+            <p>ダッシュボードの「はじめてガイド」では準備状況を確認でき、「活動のふりかえり」では年度ごとの記録を印刷・PDF保存できます。活動バッジは記録に応じた個人向けの達成表示で、公式集計には使われません。</p>
+            <ol class="help-steps">
+              <li><strong>活動組織を確認</strong><span>画面上部で現在の活動組織を確認します。別の組織を管理する場合は、組織選択欄で切り替えるか「＋組織追加」から登録します。</span></li>
+              <li><strong>基本情報を設定</strong><span>「単価・設定」で組織情報、賃金などの単価、地区・名簿、使用する活動項目を登録します。</span></li>
+              <li><strong>予算を登録</strong><span>「予算管理」で交付金の収受を記録し、採択予算額と期別の執行計画額を設定します。</span></li>
+              <li><strong>日々の作業を記録</strong><span>「作業計画」に予定を登録し、作業後は「実績記録」に実際の活動内容を入力します。必要に応じて「物品管理」や「支払先集計」も利用します。</span></li>
+              <li><strong>内容を確認して報告</strong><span>「報告書出力」で帳票を確認・出力します。出力前に、対象年度や入力内容に誤りがないか確認してください。</span></li>
+              <li><strong>定期的にバックアップ</strong><span>「バックアップ・復元」からフルバックアップを保存します。端末の故障やブラウザーのデータ消去に備え、バックアップを別の場所にも保管してください。</span></li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <h3>画面ごとの使い方</h3>
+            <div class="help-topic-grid">
+              <section class="help-topic">
+                <h4>📊 ダッシュボード</h4>
+                <p>予算の執行状況、計画・実績の件数、未払いなどをまとめて確認できます。入力内容を確認する入口としてご利用ください。</p>
+              </section>
+              <section class="help-topic">
+                <h4>💰 予算管理</h4>
+                <p>交付金の受領と予算額を登録します。金額や受領区分を確認してから保存してください。</p>
+              </section>
+              <section class="help-topic">
+                <h4>⚙️ 単価・設定</h4>
+                <p>組織情報、賃金計算方式・単価、地区、名簿、活動項目などを管理します。設定変更は計算や帳票に反映されるため、正確に入力してください。</p>
+              </section>
+              <section class="help-topic">
+                <h4>📦 物品管理</h4>
+                <p>活動で使用する物品と入出庫を記録します。在庫や購入状況の管理に利用します。</p>
+              </section>
+              <section class="help-topic">
+                <h4>📅 作業計画</h4>
+                <p>カレンダーの日付をクリックすると、その日の潮位グラフを固定表示します。日付をダブルクリックすると、その日付の作業計画を入力できます。グラフの緑色の帯は当日の作業実績時間帯です。既存の計画は内容を開いて編集・削除できます。</p>
+              </section>
+              <section class="help-topic">
+                <h4>📝 実績記録・💵 支払先集計</h4>
+                <p>実施した作業の内容や関連する支払情報を記録・確認します。作業日、活動項目、地区、金額などを実際の内容と照合してください。</p>
+              </section>
+              <section class="help-topic">
+                <h4>📄 報告書出力</h4>
+                <p>登録済みの情報をもとに様式を作成します。帳票の表示や集計結果を確認し、必要な形式で出力してください。</p>
+              </section>
+              <section class="help-topic">
+                <h4>💾 バックアップ・復元</h4>
+                <p>フルバックアップ（JSON）は復元用、CSVは表計算ソフトで確認しやすい形式です。復元すると現在のデータが置き換わるため、復元前に現在のデータもバックアップしてください。</p>
+              </section>
+            </div>
+          </div>
+
+          <div class="card help-notice">
+            <h3>大切な注意事項</h3>
+            <ul>
+              <li>データはこのブラウザー内に保存されます。別の端末やブラウザーとは自動で共有されません。</li>
+              <li>複数の活動組織を登録した場合、入力・表示する組織が画面上部で選択されていることを確認してください。</li>
+              <li>ブラウザーのデータ消去や端末故障に備え、定期的にバックアップを作成し、アプリと同じ端末だけでなく別の保存先にも保管してください。</li>
+              <li>入力内容の削除やバックアップからの復元は、対象と内容を確認してから実行してください。</li>
+            </ul>
+          </div>
+
+          <div class="card help-contact" role="note" aria-label="緊急時の問い合わせ先">
+            <h3>🆘 緊急時の問い合わせ先</h3>
+            <p><strong>杵築市役所 農林水産課 水産係</strong></p>
+            <p>電話: <a href="tel:0978621809">0978-62-1809</a></p>
+            <p>メール: <a href="mailto:osamu-hatta@city.kitsuki.lg.jp">osamu-hatta@city.kitsuki.lg.jp</a></p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 印刷領域 (様式6用) -->
+  <div id="f6-print"></div>
+
+  <!-- ======================================================
+       モーダル群
+       ====================================================== -->
+
+  <!-- 初回起動 組織初期設定モーダル -->
+  <div id="modal-first-setup" class="modal-backdrop" style="display:none;">
+    <div class="modal-content modal-sm">
+      <div class="modal-header"><h3>🔧 組織初期設定</h3></div>
+      <div class="modal-body">
+        <p class="hint">初回起動時の設定を行います。</p>
+        <div class="form-grid" style="grid-template-columns:1fr;">
+          <label>活動組織名 (*必須): <input type="text" id="init-org-name" placeholder="例: 大分市保全協議会"></label>
+          <label>年度 (令和): <input type="number" id="init-year" value="8" inputmode="numeric"></label>
+          <label>賃金計算方式:
+            <select id="init-wage-mode">
+              <option value="daily" selected>日当方式 (1日固定)</option>
+              <option value="hourly">時給方式 (作業時間自動算出)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="btn-save-init-org" style="width:100%;">初期設定を完了して開始</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 組織情報 編集モーダル -->
+  <div id="modal-org" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ 組織情報の編集</h3>
+        <button class="modal-close" data-close="modal-org">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label>組織名: <input type="text" id="modal-org-name"></label>
+          <label>代表住所:
+            <input type="text" id="modal-org-addr" placeholder="例：大分県大分市○○○">
+          </label>
+          <label>年度 (令和): <input type="number" id="modal-org-year" inputmode="numeric"></label>
+          <label>代表者名: <input type="text" id="modal-org-chairman"></label>
+          <label>1日あたり活動時間 (h): <input type="number" step="0.5" id="modal-org-hours" inputmode="numeric"></label>
+          <label>金融機関名: <input type="text" id="modal-org-bank-name"></label>
+          <label>支店名: <input type="text" id="modal-org-bank-branch"></label>
+          <label>預金種別: <input type="text" id="modal-org-bank-type"></label>
+          <label>口座番号: <input type="text" id="modal-org-bank-no"></label>
+          <label>口座名義: <input type="text" id="modal-org-bank-holder"></label>
+          <label>口座名義フリガナ: <input type="text" id="modal-org-bank-holder-kana"></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-org">キャンセル</button>
+        <button class="btn-primary" id="btn-save-org-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 単価マスタ 編集モーダル -->
+  <div id="modal-wage" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ 単価マスタの編集（税込表記）</h3>
+        <button class="modal-close" data-close="modal-wage">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label>賃金計算方式:
+            <select id="modal-wage-mode">
+              <option value="daily">日当方式 (1日固定)</option>
+              <option value="hourly">時給方式 (作業時間自動算出)</option>
+            </select>
+          </label>
+          <label>日当単価（税込） (円): <input type="number" id="modal-wage-daily" inputmode="numeric"></label>
+          <label>時給単価（税込） (円): <input type="number" id="modal-wage-hourly" inputmode="numeric"></label>
+          <label>用船料/隻（税込） (円): <input type="number" id="modal-wage-yousen" inputmode="numeric"></label>
+          <label>車両代/台（税込） (円): <input type="number" id="modal-wage-sharyo" inputmode="numeric"></label>
+          <label>標準作業時間（時間）
+            <input type="number" id="modal-wage-hours" step="0.5" min="0.5" value="3.5">
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-wage">キャンセル</button>
+        <button class="btn-primary" id="btn-save-wage-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地区 追加/編集モーダル -->
+  <div id="modal-area" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-area-title">地区を追加</h3>
+        <button class="modal-close" data-close="modal-area">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-area-id">
+        <div class="form-grid" style="grid-template-columns:1fr;">
+          <label>地区名 (*必須): <input type="text" id="modal-area-name"></label>
+          <label>標準人数: <input type="number" id="modal-area-people" value="0" inputmode="numeric"></label>
+          <label>表示色: <input type="color" id="modal-area-color" value="#16a2b8"></label>
+          <label>表示パターン:
+            <select id="modal-area-pattern">
+              <option value="solid">単色</option>
+              <option value="stripe">斜線</option>
+              <option value="dot">点模様</option>
+            </select>
+          </label>
+          <label>名簿メンバー (カンマ区切り): <textarea id="modal-area-members" rows="3"></textarea></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-area">キャンセル</button>
+        <button class="btn-primary" id="btn-save-area-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 活動項目選択モーダル -->
+  <div id="modal-activity" class="modal-backdrop" style="display:none;">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-activity-title">活動項目の有効化設定</h3>
+        <button class="modal-close" data-close="modal-activity">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-activity-grid" class="activity-check-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-activity">閉じる</button>
+        <button class="btn-primary" id="btn-save-activity-modal">設定を保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 物品 追加/編集モーダル -->
+  <div id="modal-inv-item" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-inv-item-title">物品を登録</h3>
+        <button class="modal-close" data-close="modal-inv-item">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-inv-item-id">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label>品名 (*必須): <input type="text" id="modal-inv-item-name"></label>
+          <label>分類:
+            <select id="modal-inv-item-cat">
+              <option value="bihin">備品</option>
+              <option value="shomohin">消耗品</option>
+            </select>
+          </label>
+          <label>現在在庫数: <input type="number" id="modal-inv-item-qty" value="0" inputmode="numeric"></label>
+          <label>単位: <input type="text" id="modal-inv-item-unit" placeholder="個、袋、本"></label>
+          <label>保管場所: <input type="text" id="modal-inv-item-place"></label>
+          <label>適正発注残 (消耗品): <input type="number" id="modal-inv-item-min" value="0" inputmode="numeric"></label>
+          <label style="grid-column:1/-1;">備考: <input type="text" id="modal-inv-item-memo"></label>
+          <label>件番
+            <input id="modal-inv-log-slip" type="text" placeholder="件番を入力">
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-inv-item">キャンセル</button>
+        <button class="btn-primary" id="btn-save-inv-item-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 入庫・購入登録モーダル -->
+  <div id="modal-inv-log" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-inv-log-title">入庫・購入を登録</h3>
+        <button class="modal-close" data-close="modal-inv-log">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-inv-log-id">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label>対象物品 (*必須): <select id="modal-inv-log-item"></select></label>
+          <label>入庫日 (*必須): <input type="date" id="modal-inv-log-date"></label>
+          <label>数量: <input type="number" id="modal-inv-log-qty" value="1" inputmode="numeric"></label>
+          <label>単価（税込） (円): <input type="number" id="modal-inv-log-price" value="0" inputmode="numeric"></label>
+          <label>諸経費（税込） (円): <input type="number" id="modal-inv-log-extra" value="0" inputmode="numeric"></label>
+          <label>領収書番号: <input type="text" id="modal-inv-log-receipt"></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-inv-log">キャンセル</button>
+        <button class="btn-primary" id="btn-save-inv-log-modal">登録</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 作業計画 追加/編集モーダル -->
+  <div id="modal-plan" class="modal-backdrop" style="display:none;">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3 id="modal-plan-title">作業計画の登録</h3>
+        <button class="modal-close" data-close="modal-plan">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-plan-id">
+        <input type="hidden" id="modal-plan-copy-src">
+
+        <!-- ===== 2カラムレイアウト ===== -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 24px;">
+
+          <!-- 左カラム：基本情報 -->
+          <div>
+            <div class="modal-section-title">📋 基本情報</div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+              <label>日付 <span class="req">*</span>
+                <input type="date" id="modal-plan-date">
+              </label>
+              <label>地区 <span class="req">*</span>
+                <select id="modal-plan-area"></select>
+              </label>
+              <label style="grid-column:1/-1;">活動項目 <span class="req">*</span>
+                <select id="modal-plan-act"></select>
+              </label>
+            </div>
+
+            <div class="modal-section-title" style="margin-top:12px;">⏰ 作業時間</div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <label>開始時刻 <span class="req">*</span>
+                <select id="modal-plan-start">
+                  <option value="">-- 選択 --</option>
+                </select>
+              </label>
+              <label>終了時刻（自動）
+                <input type="text" id="modal-plan-end" readonly style="background:#162032; color:#94a3b8; cursor:not-allowed;">
+              </label>
+              <label>作業時間
+                <input type="text" id="modal-plan-hours-disp" readonly
+                  style="background:#162032; color:#34d399; font-weight:bold; cursor:not-allowed;">
+              </label>
+            </div>
+
+            <div class="modal-section-title" style="margin-top:12px;">👥 人員・機材</div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <label>参加人数
+                <input type="number" id="modal-plan-people" value="0" min="0" inputmode="numeric">
+              </label>
+              <label>用船隻数
+                <input type="number" id="modal-plan-boat" value="0" min="0" inputmode="numeric">
+              </label>
+              <label>車両台数
+                <input type="number" id="modal-plan-car" value="0" min="0" inputmode="numeric">
+              </label>
+            </div>
+
+            <div class="modal-section-title" style="margin-top:12px;">📝 内容・備考</div>
+            <textarea id="modal-plan-content" rows="3" style="width:100%; resize:vertical;"></textarea>
+          </div>
+
+          <!-- 右カラム：物品・費用 -->
+          <div>
+            <div class="modal-section-title">📦 使用物品</div>
+            <div id="modal-plan-items-wrap">
+              <div id="modal-plan-items-list"></div>
+              <button type="button" class="btn-outline" id="btn-plan-add-item" style="margin-top:6px; font-size:12px;">＋
+                物品を追加</button>
+            </div>
+
+            <div class="modal-section-title" style="margin-top:16px;">💰 費用見積（自動計算）</div>
+            <div id="modal-plan-cost-preview" style="background:#162032; border:1px solid #334155;
+                    border-radius:8px; padding:12px; font-size:13px;">
+              <table style="width:100%; border-collapse:collapse;">
+                <tbody>
+                  <tr>
+                    <td style="color:#94a3b8; padding:3px 0;">日当</td>
+                    <td id="cost-jinken" style="text-align:right; font-weight:600; color:#e2e8f0;">0 円</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#94a3b8; padding:3px 0;">傭船料</td>
+                    <td id="cost-yousen" style="text-align:right; font-weight:600; color:#e2e8f0;">0 円</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#94a3b8; padding:3px 0;">車両費</td>
+                    <td id="cost-kotsu" style="text-align:right; font-weight:600; color:#e2e8f0;">0 円</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#94a3b8; padding:3px 0;">物品費</td>
+                    <td id="cost-items" style="text-align:right; font-weight:600; color:#e2e8f0;">0 円</td>
+                  </tr>
+                  <tr style="border-top:2px solid #334155;">
+                    <td style="font-weight:700; padding:6px 0 3px; color:#e2e8f0;">合計</td>
+                    <td id="cost-total" style="text-align:right; font-size:16px;
+                            font-weight:700; color:#34d399;">0 円</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div id="modal-plan-budget-alert" style="display:none;
+                margin-top:8px; padding:8px 10px; border-radius:6px;
+                background:rgba(239,68,68,.15); border:1px solid #7f1d1d;
+                color:#f87171; font-size:12px; font-weight:600;">
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- /2カラム -->
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn-outline" id="btn-plan-copy" style="font-size:12px;">📋 この計画をコピー</button>
+        <div>
+          <button type="button" class="btn-del" id="btn-delete-plan-modal" style="display:none;">🗑 計画を削除</button>
+          <button class="btn-outline" data-close="modal-plan">キャンセル</button>
+          <button class="btn-primary" id="btn-save-plan-modal">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 実績 追加/編集モーダル -->
+  <div id="modal-rec" class="modal-backdrop" style="display:none;">
+    <div class="modal-content modal-lg" style="max-width:900px; width:95vw;">
+      <div class="modal-header">
+        <h3 id="modal-rec-title">作業実績の登録</h3>
+        <button class="modal-close" data-close="modal-rec">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-rec-id">
+        <input type="hidden" id="modal-rec-legacy-boat-count" value="0">
+        <input type="hidden" id="modal-rec-legacy-car-count" value="0">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label id="modal-rec-plan-row" style="grid-column:1/-1;">紐付ける作業計画:
+            <select id="modal-rec-plan-select">
+              <option value="">(計画外・突発作業)</option>
+            </select>
+          </label>
+          <label>日付 (*必須): <input type="date" id="modal-rec-date"></label>
+          <label>地区 (*必須): <select id="modal-rec-area"></select></label>
+          <label style="grid-column:1/-1;">活動項目 (*必須): <select id="modal-rec-act"></select></label>
+          <div style="grid-column:1/-1;">
+            <div style="font-weight:600; margin-bottom:6px;">参加者（地区メンバーから選択）</div>
+            <div id="modal-rec-participants" class="activity-check-grid"></div>
+          </div>
+          <label>名簿外ボランティア人数: <input type="number" id="modal-rec-volunteer-count" value="0" min="0" inputmode="numeric"></label>
+          <div style="display:flex; align-items:end; font-size:12px; color:#94a3b8;">
+            参加人数合計: <strong id="modal-rec-people-total" style="margin-left:6px; color:#e2e8f0;">0人</strong>
+          </div>
+          
+          <!-- 用船提供者 -->
+          <div style="grid-column:1/-1; margin-top:10px;">
+            <div style="font-weight:600; margin-bottom:4px; font-size:13px;">
+              用船提供者
+              <span style="font-size:11px; color:#94a3b8; margin-left:6px;">
+                （隻数: <strong id="modal-rec-boat-total" style="color:#e2e8f0;">0</strong>隻）
+              </span>
+            </div>
+            <div id="modal-rec-vessel-providers" class="activity-check-grid"></div>
+          </div>
+          
+          <!-- 車両提供者 -->
+          <div style="grid-column:1/-1; margin-top:10px;">
+            <div style="font-weight:600; margin-bottom:4px; font-size:13px;">
+              車両提供者
+              <span style="font-size:11px; color:#94a3b8; margin-left:6px;">
+                （台数: <strong id="modal-rec-car-total" style="color:#e2e8f0;">0</strong>台）
+              </span>
+            </div>
+            <div id="modal-rec-vehicle-providers" class="activity-check-grid"></div>
+          </div>
+          <label>開始時刻: <input type="time" id="modal-rec-start" step="900"></label>
+          <label>終了時刻: <input type="time" id="modal-rec-end" step="900"></label>
+          <label>潜水作業:
+            <select id="modal-rec-diving">
+              <option value="no">なし</option>
+              <option value="yes">あり</option>
+            </select>
+          </label>
+          <label>天候: <input type="text" id="modal-rec-weather" placeholder="晴れ 等"></label>
+          <label>潮位 (cm): <input type="number" id="modal-rec-tide-level" placeholder="補完値" inputmode="numeric"></label>
+          <label>潮位メモ: <input type="text" id="modal-rec-tide-note" placeholder="下げ潮 等"></label>
+          <label style="grid-column:1/-1;">作業内容 (*必須):
+            <input type="text" id="modal-rec-work-title" placeholder="例：袋の交換作業">
+          </label>
+                    
+          <div style="grid-column:1/-1;">
+            <div style="font-weight:600; margin-bottom:6px;">作業実績</div>
+            <div id="modal-rec-work-results">
+              <!-- 動的に行が追加される -->
+            </div>
+            <button type="button" class="btn-secondary" id="btn-add-work-result" style="font-size:11px; margin-top:4px;">＋
+              実績を追加</button>
+          </div>
+                    
+          <label style="grid-column:1/-1;">備考:
+            <textarea id="modal-rec-note" rows="2" placeholder="例：潮が高く作業が思うように出来なかった。（問題なく実施できた場合は空欄でOK）" value=""></textarea>
+          </label>
+
+        </div>
+        <!-- 物品消費設定（消耗品） -->
+        <h4 style="margin-top:16px; margin-bottom:8px;">使用物品 (消耗品消費)</h4>
+        <div id="modal-rec-items-container"></div>
+        <button type="button" class="btn-secondary" id="btn-add-rec-item-row" style="font-size:11px; margin-top:4px;">＋ 物品を追加</button>
+
+        <!-- 紐付く支払実績一覧 -->
+        <h4 style="margin-top:16px; margin-bottom:8px;">紐付いている支払実績</h4>
+        <div id="modal-rec-payments-container"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-rec">キャンセル</button>
+        <button class="btn-primary" id="btn-save-rec-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 支払実績 追加/編集モーダル -->
+  <div id="modal-expense" class="modal-backdrop" style="display:none;">
+    <div class="modal-content" style="max-width:600px; width:95%;">
+      <div class="modal-header">
+        <h3 id="modal-expense-title">支払実績の登録</h3>
+        <button class="modal-close" data-close="modal-expense">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-expense-id">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label>支払日 (*必須): <input type="date" id="modal-expense-date"></label>
+          <label>金額（税込） (円) (*必須): <input type="number" id="modal-expense-amount" value="0" inputmode="numeric"></label>
+          <label style="grid-column:1/-1;">支払者名: <input type="text" id="modal-expense-payer"></label>
+          <label>件番（自動採番）
+            <input id="modal-expense-slip-no" type="text" placeholder="保存時に自動採番" readonly>
+          </label>
+        </div>
+        <h4 style="margin-top:12px; margin-bottom:6px;">対象作業実績の紐付け (複数選択可)</h4>
+        <div id="modal-expense-records-select"
+          style="max-height:240px; overflow-y:auto; border:1px solid var(--border-color); padding:8px; border-radius:6px;">
+        </div>
+        <h4 style="margin-top:12px; margin-bottom:6px;">対象物品購入ログの紐付け (複数選択可)</h4>
+        <div id="modal-expense-inventory-select"
+          style="max-height:180px; overflow-y:auto; border:1px solid var(--border-color); padding:8px; border-radius:6px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-expense">キャンセル</button>
+        <button class="btn-primary" id="btn-save-expense-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 物品購入支払実績 追加/編集モーダル -->
+  <div id="modal-inv-expense" class="modal-backdrop" style="display:none;">
+    <div class="modal-content" style="max-width:560px; width:95%;">
+      <div class="modal-header">
+        <h3 id="modal-inv-expense-title">物品支払実績の登録</h3>
+        <button class="modal-close" data-close="modal-inv-expense">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-inv-expense-id">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <label>支払日 (*必須): <input type="date" id="modal-inv-expense-date"></label>
+          <label>金額（税込）(円) (*必須): <input type="number" id="modal-inv-expense-amount" value="0"
+              inputmode="numeric"></label>
+          <label style="grid-column:1/-1;">支払者名: <input type="text" id="modal-inv-expense-payer"></label>
+          <label>件番（自動採番）
+            <input id="modal-inv-expense-slip-no" type="text" placeholder="保存時に自動採番" readonly>
+          </label>
+        </div>
+        <h4 style="margin-top:12px; margin-bottom:6px;">対象物品購入ログの紐付け (複数選択可)</h4>
+        <div id="modal-inv-expense-inventory-select"
+          style="max-height:300px; overflow-y:auto; border:1px solid var(--border-color); padding:8px; border-radius:6px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-inv-expense">キャンセル</button>
+        <button class="btn-primary" id="btn-save-inv-expense-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 交付金収受 追加/編集モーダル -->
+  <div id="modal-grant" class="modal-backdrop" style="display:none;">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h3 id="modal-grant-title">交付金収受の登録</h3>
+        <button class="modal-close" data-close="modal-grant">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-grant-id">
+        <div class="form-grid" style="grid-template-columns:1fr;">
+          <label>受領日 (*必須): <input type="date" id="modal-grant-date"></label>
+          <label>区分:
+            <select id="modal-grant-stage">
+              <option value="council_to_org">協議会 → 組織</option>
+              <option value="org_to_jfa">組織 → 漁協（立替者）</option>
+            </select>
+          </label>
+          <label>金額（税込） (円) (*必須): <input type="number" id="modal-grant-amount" value="0" inputmode="numeric"></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" data-close="modal-grant">キャンセル</button>
+        <button class="btn-primary" id="btn-save-grant-modal">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS モジュール読み込み順序 -->
+  <script src="src/js/constants.js"></script>
+  <script src="src/js/storage.js"></script>
+  <script src="src/js/data-store.js"></script>
+  <script src="src/js/utils.js"></script>
+  <script src="src/js/tideData.js"></script>
+  <script src="src/js/master.js"></script>
+  <script src="src/js/budget.js"></script>
+  <script src="src/js/inventory.js"></script>
+  <script src="src/js/plan.js"></script>
+  <script src="src/js/record.js"></script>
+  <script src="src/js/dashboard.js"></script>
+  <script src="src/js/payment.js"></script>
+  <script src="src/js/tideRecord.js"></script>
+  <script src="src/js/ics.js"></script>
+  <script src="src/js/calc.js"></script>
+  <script src="src/js/backup.js"></script>
+  <script src="src/js/navigation.js"></script>
+  <script src="src/js/main.js"></script>
+  <!-- 報告書レイヤー -->
+  <script src="src/js/form1.js"></script>
+  <script src="src/js/form2.js"></script>
+  <script src="src/js/form-ledger.js"></script>
+  <script src="src/js/form4.js"></script>
+  <script src="src/js/form5-map.js"></script>
+  <script src="src/js/form5-imagemap.js"></script>
+  <script src="src/js/form5.js"></script>
+  <script src="src/js/form6.js"></script>
+  <script src="src/js/batch.js"></script>
+</body>
+</html>
