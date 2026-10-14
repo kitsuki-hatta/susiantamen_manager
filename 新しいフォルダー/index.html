@@ -32,6 +32,7 @@
       <div class="nav-section-title">日次管理</div>
       <button type="button" class="nav-btn active" data-view="dashboard">📊 ダッシュボード</button>
       <button type="button" class="nav-btn" data-view="budget">💰 予算管理</button>
+      <button type="button" class="nav-btn" data-view="annual-application">📋 年度当初の採択申請</button>
       <button type="button" class="nav-btn" data-view="settings">⚙️ 単価・設定</button>
       <button type="button" class="nav-btn" data-view="inventory">📦 物品管理</button>
       <button type="button" class="nav-btn" data-view="plan">📅 作業計画</button>
@@ -377,6 +378,64 @@
         <div class="view-body">
           <div class="card">
             <div id="payment-summary"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 年度当初の採択申請情報 -->
+      <section id="view-annual-application" class="view">
+        <div class="view-header"><h2>📋 年度当初の採択申請</h2></div>
+        <div class="view-body">
+          <div class="card">
+            <p class="hint">年度ごとの申請準備に必要な情報を保存します。活動組織・地区・活動項目などの基本情報は、各設定・計画画面の登録内容を参照してください。提出時は水産庁・協議会の最新様式と照合してください。</p>
+            <div class="form-grid">
+              <label>申請年度（令和）:
+                <input type="number" id="application-year" min="1" step="1" inputmode="numeric">
+              </label>
+              <label>提出予定日:
+                <input type="date" id="application-applicationDate">
+              </label>
+              <label>申請担当者:
+                <input type="text" id="application-contactName">
+              </label>
+              <label>電話番号:
+                <input type="tel" id="application-contactPhone">
+              </label>
+              <label>メールアドレス:
+                <input type="email" id="application-contactEmail">
+              </label>
+              <label style="grid-column:1/-1;">対象資源・活動区域:
+                <textarea id="application-resourceArea" rows="2"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">活動の現状・課題:
+                <textarea id="application-currentIssues" rows="3"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">年度の活動目標:
+                <textarea id="application-annualGoal" rows="3"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">活動内容・実施方法:
+                <textarea id="application-activityPlan" rows="4"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">実施時期・年間スケジュール:
+                <textarea id="application-implementationSchedule" rows="3"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">期待される成果:
+                <textarea id="application-expectedOutcomes" rows="3"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">実施体制・関係機関との連携:
+                <textarea id="application-implementationStructure" rows="3"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">安全対策:
+                <textarea id="application-safetyPlan" rows="3"></textarea>
+              </label>
+              <label style="grid-column:1/-1;">その他・提出書類の確認事項:
+                <textarea id="application-notes" rows="3"></textarea>
+              </label>
+            </div>
+            <div class="toolbar">
+              <button type="button" class="btn-primary" id="btn-save-annual-application">この年度の情報を保存</button>
+              <span id="application-save-status" class="hint" role="status" aria-live="polite"></span>
+            </div>
           </div>
         </div>
       </section>
@@ -1541,6 +1600,7 @@
   <script src="src/js/calc.js"></script>
   <script src="src/js/backup.js"></script>
   <script src="src/js/navigation.js"></script>
+  <script src="src/js/annual-application.js"></script>
   <script src="src/js/main.js"></script>
   <!-- 報告書レイヤー -->
   <script src="src/js/form1.js"></script>

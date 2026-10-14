@@ -222,6 +222,8 @@ App.Backup = (function () {
         const storageKey = keys[k];
         if (data[k] !== undefined) {
           Storage.setByKey(storageKey, data[k]);
+        } else if (k === "annualApplication") {
+          Storage.setByKey(storageKey, Storage.getDefaultByKey(storageKey));
         }
       });
       if (backupObj.indexedDBData && App.DataStore && App.DataStore.isReady()) {
