@@ -27,6 +27,7 @@ App.Storage = (function () {
     tideData: "moba_tide_data",
     form5: "moba_form5",
     form6: "moba_form6",
+    annualApplication: "moba_annual_application",
     lastBackup: "moba_last_backup",
   };
   const ORGANIZATIONS_KEY = "moba_organizations_v1";
@@ -194,6 +195,7 @@ App.Storage = (function () {
       [KEYS.tideData]: {},
       [KEYS.form5]: {},
       [KEYS.form6]: {},
+      [KEYS.annualApplication]: {},
       [KEYS.lastBackup]: null,
     };
   }
@@ -332,6 +334,9 @@ App.Storage = (function () {
     const saved = setByKey(KEYS.form6, value);
     return saved;
   }
+
+  function getAnnualApplication() { return getByKey(KEYS.annualApplication); }
+  function setAnnualApplication(value) { return setByKey(KEYS.annualApplication, value); }
 
   function getLastBackup() { return getByKey(KEYS.lastBackup); }
   function setLastBackup(value) { return setByKey(KEYS.lastBackup, value); }
@@ -553,6 +558,8 @@ App.Storage = (function () {
     setForm5: setForm5,
     getForm6: getForm6,
     setForm6: setForm6,
+    getAnnualApplication: getAnnualApplication,
+    setAnnualApplication: setAnnualApplication,
     getLastBackup: getLastBackup,
     setLastBackup: setLastBackup,
     hasAnyMobaData: hasAnyMobaData,

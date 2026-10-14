@@ -197,6 +197,11 @@
 - ダッシュボードのはじめてガイド・年度ふりかえり・達成バッジと、潮位グラフの作業時間帯表示について説明
 - 緊急時問い合わせ先を表示：杵築市役所 農林水産課 水産係（TEL: 0978-62-1809、E-mail: osamu-hatta@city.kitsuki.lg.jp）
 
+### 6.18 年度当初の採択申請
+- 年度ごとに申請予定日、担当者・連絡先、対象資源・活動区域、現状・課題、活動目標・計画、実施時期、期待される成果、実施体制、安全対策、確認事項を入力・保存
+- 活動組織・地区・活動項目など既存の基本情報は重複して登録せず、各設定・計画画面の情報を利用
+- 保存情報は申請準備用。提出時は水産庁・協議会が示す最新様式との照合が必要
+
 ## 7. データ仕様（概略）
 
 ### 7.1 保存キー（moba_）
@@ -204,7 +209,7 @@ moba_org / moba_settings / moba_budget / moba_grant_flow /
 moba_budget_expense / moba_master / moba_areas / moba_members /
 moba_activities / moba_plan / moba_record / moba_inventory /
 moba_inv_log / moba_tide_record / moba_tide_data / moba_form5 /
-moba_form6 / moba_last_backup
+moba_form6 / moba_annual_application / moba_last_backup
 
 - 組織一覧 `moba_organizations_v1` と現在選択中の組織ID `moba_active_organization_id` は全組織で共有
 - 既定組織は従来の `moba_` キーを維持。追加組織は `moba_{orgId}_{key}` 形式のキーを利用
@@ -266,6 +271,10 @@ moba_form6 / moba_last_backup
 
 ### 7.15 様式6データ（moba_form6）
 - recordId ごとの写真エントリ（画像Blob参照・回転・スケール・ページ/写真番号）。画像本体はIndexedDBに保存
+
+### 7.16 年度当初の採択申請情報（moba_annual_application）
+- 令和年度をキーとした年度別の申請準備情報を保存
+- 各年度の情報: 提出予定日、申請担当者・連絡先、対象資源・活動区域、現状・課題、活動目標・計画、実施時期、成果、実施体制、安全対策、その他確認事項
 
 ## 8. 計算仕様
 

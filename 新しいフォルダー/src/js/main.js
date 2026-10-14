@@ -283,6 +283,9 @@ window.App = window.App || {};
         console.error("作業データストレージを初期化できませんでした:", error);
       }
     }
+    if (App.AnnualApplication && typeof App.AnnualApplication.init === "function") {
+      App.AnnualApplication.init();
+    }
 
     // ナビゲーション初期化
     if (Navigation && typeof Navigation.init === "function") {
